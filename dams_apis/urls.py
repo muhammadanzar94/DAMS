@@ -1,7 +1,7 @@
 # urls.py
 from django.urls import path
 from .views.doctor_views import create_doctor, update_doctor, delete_doctor, list_doctors
-from .views.appointment_views import create_appointment, disassign_appointment, list_doctors_appointments
+from .views.appointment_views import create_appointment, update_appointment, disassign_appointment, list_doctors_appointments
 
 urlpatterns = [
     # Doctor Endpoints

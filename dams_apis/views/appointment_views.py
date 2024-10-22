@@ -34,11 +34,12 @@ def create_appointment(request):
     return Response({'message': 'Appointments created successfully'}, status=status.HTTP_201_CREATED)
 
 
+@api_view(['POST'])
 def update_appointment(request, appointment_id):
-    if request.method == 'PUT':
+    if request.method == 'POST':
         try:
             # Parse PUT data
-            new_doctor_id = request.PUT.get('doctor_id')
+            new_doctor_id = request.POST.get('doctor_id')
 
             # Validate that the doctor exists
             new_doctor = get_object_or_404(Doctor, id=new_doctor_id)
@@ -48,7 +49,8 @@ def update_appointment(request, appointment_id):
 
             # Update the doctor for the appointment
             appointment.doctor_id = new_doctor.id
-            appointment.doctor_name = new_doctor.name
+            appointment.doctor_first_name = new_doctor.first_name
+            appointment.doctor_last_name = new_doctor.last_name
             appointment.save()
 
             return Response({
