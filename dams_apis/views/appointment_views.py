@@ -1,4 +1,4 @@
-# views/appointment_views.py
+from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
@@ -21,25 +21,32 @@ def create_appointment(request):
         return Response({'error': 'Doctor not found'}, status=status.HTTP_404_NOT_FOUND)
 
     # Create multiple appointments if necessary
-    appointments = []
-    if isinstance(appointment_dates, list):
-        for date in appointment_dates:
-            appointment = Appointment(doctor=doctor, appointment_date=date)
-            appointments.append(appointment)
-        Appointment.objects.bulk_create(appointments)
-    else:
-        appointment = Appointment(doctor=doctor, appointment_date=appointment_dates)
-        appointment.save()
-
+    try:
+        appointments = []
+        if isinstance(appointment_dates, list):
+            for date in appointment_dates:
+                appointment = Appointment(doctor=doctor, doctor_first_name = doctor.first_name, doctor_last_name = doctor.last_name, appointment_date=date)
+                appointments.append(appointment)
+            Appointment.objects.bulk_create(appointments)
+        else:
+            appointment = Appointment(doctor=doctor, appointment_date=appointment_dates)
+            appointment.save()
+    
+    except IntegrityError as e:
+        return Response({'status': 'error', 'message': 'Appointment already exists for this date.'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    except Exception as e:
+        return Response({'status': 'error', 'message': str(e)}, status=400)
+        
     return Response({'message': 'Appointments created successfully'}, status=status.HTTP_201_CREATED)
 
 
-@api_view(['POST'])
+@api_view(['PUT'])
 def update_appointment(request, appointment_id):
-    if request.method == 'POST':
+    if request.method == 'PUT':
         try:
             # Parse PUT data
-            new_doctor_id = request.POST.get('doctor_id')
+            new_doctor_id = request.data.copy()['doctor_id']
 
             # Validate that the doctor exists
             new_doctor = get_object_or_404(Doctor, id=new_doctor_id)
@@ -48,7 +55,7 @@ def update_appointment(request, appointment_id):
             appointment = get_object_or_404(Appointment, id=appointment_id)
 
             # Update the doctor for the appointment
-            appointment.doctor_id = new_doctor.id
+            appointment.doctor = new_doctor
             appointment.doctor_first_name = new_doctor.first_name
             appointment.doctor_last_name = new_doctor.last_name
             appointment.save()
@@ -59,7 +66,8 @@ def update_appointment(request, appointment_id):
                 'appointment': {
                     'appointment_id': appointment.id,
                     'new_doctor_id': appointment.doctor_id,
-                    'new_doctor_name': appointment.doctor_name,
+                    'new_doctor_first_name': appointment.doctor_first_name,
+                    'new_doctor_last_name': appointment.doctor_last_name,
                     'appointment_date': appointment.appointment_date
                 }
             }, status=200)
