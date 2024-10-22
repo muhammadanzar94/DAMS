@@ -1,0 +1,33 @@
+# .gitignore
+
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+*.pdb
+
+# Django
+*.sqlite3
+db.sqlite3
+*.log
+*.pot
+*.py[cod]
+*.swp
+*~
+
+# Environment variables
+.env
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+
+# Static and media files (optional)
+staticfiles/
+media/
