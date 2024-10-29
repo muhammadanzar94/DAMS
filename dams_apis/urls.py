@@ -12,8 +12,8 @@ urlpatterns = [
 
     # Appointment Endpoints
     path('appointments/create/', create_appointment, name='create_appointment'),
-    path('appointments/update/<int:appointment_id>/', update_appointment, name='update_appointment'),
-    path('appointments/disassign/<int:doctor_id>/<str:date>/', disassign_appointment, name='disassign_appointment'),
+    path('appointments/update/<str:date>/', update_appointment, name='update_appointment'),
+    path('appointments/disassign/<str:date>/', disassign_appointment, name='disassign_appointment'),
     path('doctors/appointments/', list_doctors_appointments, name='list_doctors_appointments'),
     path('appointment/<str:date>/', appointment_info, name='appointment_info'),
     path('doctor/<int:doctor_id>/appointments/', doctor_appointments, name='doctor_appointments'),   

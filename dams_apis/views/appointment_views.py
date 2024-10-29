@@ -33,7 +33,7 @@ def create_appointment(request):
             appointment.save()
     
     except IntegrityError as e:
-        return Response({'status': 'error', 'message': 'Appointment already exists for this date.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'message': 'Appointment already exists for this date.'}, status=200)
     
     except Exception as e:
         return Response({'status': 'error', 'message': str(e)}, status=400)
@@ -42,7 +42,7 @@ def create_appointment(request):
 
 
 @api_view(['PUT'])
-def update_appointment(request, appointment_id):
+def update_appointment(request, date):
     if request.method == 'PUT':
         try:
             new_doctor_id = request.data.copy()['doctor_id']
@@ -51,7 +51,7 @@ def update_appointment(request, appointment_id):
             new_doctor = get_object_or_404(Doctor, id=new_doctor_id)
 
             # Get the appointment to update
-            appointment = get_object_or_404(Appointment, id=appointment_id)
+            appointment = get_object_or_404(Appointment, appointment_date=date)
 
             appointment.doctor = new_doctor
             appointment.doctor_first_name = new_doctor.first_name
@@ -76,13 +76,13 @@ def update_appointment(request, appointment_id):
     return Response({'status': 'error', 'message': 'Invalid request method'}, status=405)
 
 @api_view(['DELETE'])
-def disassign_appointment(request, doctor_id, date):
+def disassign_appointment(request, date):
     try:
-        appointment = Appointment.objects.get(doctor_id=doctor_id, appointment_date=date)
+        appointment = Appointment.objects.get(appointment_date=date)
         appointment.delete()
         return Response({'message': 'Appointment disassigned successfully'}, status=status.HTTP_204_NO_CONTENT)
     except Appointment.DoesNotExist:
-        return Response({'error': 'Appointment not found'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'message': 'Appointment not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['GET'])
