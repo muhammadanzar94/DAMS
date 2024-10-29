@@ -45,7 +45,6 @@ def create_appointment(request):
 def update_appointment(request, appointment_id):
     if request.method == 'PUT':
         try:
-            # Parse PUT data
             new_doctor_id = request.data.copy()['doctor_id']
 
             # Validate that the doctor exists
@@ -54,7 +53,6 @@ def update_appointment(request, appointment_id):
             # Get the appointment to update
             appointment = get_object_or_404(Appointment, id=appointment_id)
 
-            # Update the doctor for the appointment
             appointment.doctor = new_doctor
             appointment.doctor_first_name = new_doctor.first_name
             appointment.doctor_last_name = new_doctor.last_name
@@ -98,5 +96,38 @@ def list_doctors_appointments(request):
             'doctor': doctor.first_name + ' ' + doctor.last_name,
             'appointments': appointments
         })
+    
+    return Response(response_data)
+
+
+@api_view(['GET'])
+def appointment_info(request, date):
+
+    try:
+        appointment = Appointment.objects.get(appointment_date=date)
+    except Appointment.DoesNotExist:
+        return Response({'message': 'No Appointment at ' + date})
+
+    return Response({
+        'doctor': appointment.doctor_first_name + ' ' + appointment.doctor_last_name,
+    })
+    
+
+@api_view(['GET'])
+def doctor_appointments(request, doctor_id):
+    
+    try:
+        doctor = Doctor.objects.get(pk=doctor_id)
+    except Doctor.DoesNotExist:
+        return Response({'message': 'Doctor not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    response_data = []
+
+    appointments = [appt.appointment_date for appt in doctor.appointments.all()]
+
+    response_data = {
+        'doctor': doctor.first_name + ' ' + doctor.last_name,
+        'appointments': appointments
+    }
     
     return Response(response_data)
