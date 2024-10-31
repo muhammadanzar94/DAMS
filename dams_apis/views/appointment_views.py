@@ -12,8 +12,8 @@ class AppointmentView(APIView):
     def post(self, request):
 
         data = request.data
-        doctor_id = data.get('doctor_id')
-        appointment_dates = data.get('appointment_dates')  # Could be a single date or a list of dates
+        doctor_id = data['doctor_id']
+        appointment_dates = data['appointment_dates']  # Could be a single date or a list of dates
         try:
             doctor = Doctor.objects.get(pk=doctor_id)
         except Doctor.DoesNotExist:
@@ -31,7 +31,7 @@ class AppointmentView(APIView):
                 appointment = Appointment(doctor=doctor, doctor_first_name=doctor.first_name, doctor_last_name=doctor.last_name, appointment_date=appointment_dates)
                 appointment.save()
         except IntegrityError as e:
-            return Response({'message': 'Appointment already exists for this date.'}, status=200)
+            return Response({'message': 'Appointment already exists for this date.'}, status=400)
         except Exception as e:
             return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -63,7 +63,6 @@ class AppointmentView(APIView):
         except Exception as e:
             return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-
     def delete(self, request, date):
         try:
             appointment = get_object_or_404(Appointment, appointment_date=date)
@@ -73,12 +72,10 @@ class AppointmentView(APIView):
             return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request):
-        """List all doctors with their appointments, or get specific appointment details."""
         doctor_id = request.query_params.get('doctor_id')
         date = request.query_params.get('date')
         
         if date:
-            # Return specific appointment info for a given date
             try:
                 appointment = Appointment.objects.get(appointment_date=date)
                 return Response({
@@ -88,7 +85,6 @@ class AppointmentView(APIView):
                 return Response({'message': f'No appointment found on {date}'}, status=status.HTTP_404_NOT_FOUND)
         
         elif doctor_id:
-            # Return appointments for a specific doctor
             doctor = get_object_or_404(Doctor, pk=doctor_id)
             appointments = [appt.appointment_date for appt in doctor.appointments.all()]
             return Response({
@@ -97,7 +93,6 @@ class AppointmentView(APIView):
             }, status=status.HTTP_200_OK)
         
         else:
-            # List all doctors with their appointments
             doctors = Doctor.objects.prefetch_related('appointments').all()
             response_data = []
             for doctor in doctors:
