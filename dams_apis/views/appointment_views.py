@@ -1,58 +1,49 @@
 from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.views import APIView
 from ..models.doctor import Doctor
 from ..models.appointment import Appointment
 from ..serializers import AppointmentSerializer
 from django.shortcuts import get_object_or_404
 
-# Appointment Views
-
-@api_view(['POST'])
-def create_appointment(request):
-    data = request.data
-    doctor_id = data.get('doctor_id')
-    appointment_dates = data.get('appointment_dates')  # Could be a single date or list of dates
+class AppointmentView(APIView):
     
-    try:
-        doctor = Doctor.objects.get(pk=doctor_id)
-    except Doctor.DoesNotExist:
-        return Response({'error': 'Doctor not found'}, status=status.HTTP_404_NOT_FOUND)
+    def post(self, request):
 
-    # Create multiple appointments if necessary
-    try:
-        appointments = []
-        if isinstance(appointment_dates, list):
-            for date in appointment_dates:
-                appointment = Appointment(doctor=doctor, doctor_first_name = doctor.first_name, doctor_last_name = doctor.last_name, appointment_date=date)
-                appointments.append(appointment)
-            Appointment.objects.bulk_create(appointments)
-        else:
-            appointment = Appointment(doctor=doctor, appointment_date=appointment_dates)
-            appointment.save()
-    
-    except IntegrityError as e:
-        return Response({'message': 'Appointment already exists for this date.'}, status=200)
-    
-    except Exception as e:
-        return Response({'status': 'error', 'message': str(e)}, status=400)
-        
-    return Response({'message': 'Appointments created successfully'}, status=status.HTTP_201_CREATED)
-
-
-@api_view(['PUT'])
-def update_appointment(request, date):
-    if request.method == 'PUT':
+        data = request.data
+        doctor_id = data.get('doctor_id')
+        appointment_dates = data.get('appointment_dates')  # Could be a single date or a list of dates
         try:
-            new_doctor_id = request.data.copy()['doctor_id']
+            doctor = Doctor.objects.get(pk=doctor_id)
+        except Doctor.DoesNotExist:
+            return Response({'error': 'Doctor not found'}, status=status.HTTP_404_NOT_FOUND)
 
-            # Validate that the doctor exists
-            new_doctor = get_object_or_404(Doctor, id=new_doctor_id)
+        # Create multiple appointments if necessary
+        try:
+            appointments = []
+            if isinstance(appointment_dates, list):
+                for date in appointment_dates:
+                    appointment = Appointment(doctor=doctor, doctor_first_name=doctor.first_name, doctor_last_name=doctor.last_name, appointment_date=date)
+                    appointments.append(appointment)
+                Appointment.objects.bulk_create(appointments)
+            else:
+                appointment = Appointment(doctor=doctor, doctor_first_name=doctor.first_name, doctor_last_name=doctor.last_name, appointment_date=appointment_dates)
+                appointment.save()
+        except IntegrityError as e:
+            return Response({'message': 'Appointment already exists for this date.'}, status=200)
+        except Exception as e:
+            return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({'message': 'Appointments created successfully'}, status=status.HTTP_201_CREATED)
 
-            # Get the appointment to update
-            appointment = get_object_or_404(Appointment, appointment_date=date)
 
+    def put(self, request, date):
+        new_doctor_id = request.data.get('doctor_id')
+        new_doctor = get_object_or_404(Doctor, id=new_doctor_id)
+        appointment = get_object_or_404(Appointment, appointment_date=date)
+
+        try:
             appointment.doctor = new_doctor
             appointment.doctor_first_name = new_doctor.first_name
             appointment.doctor_last_name = new_doctor.last_name
@@ -68,66 +59,51 @@ def update_appointment(request, date):
                     'new_doctor_last_name': appointment.doctor_last_name,
                     'appointment_date': appointment.appointment_date
                 }
-            }, status=200)
-
+            }, status=status.HTTP_200_OK)
         except Exception as e:
-            return Response({'status': 'error', 'message': str(e)}, status=400)
-
-    return Response({'status': 'error', 'message': 'Invalid request method'}, status=405)
-
-@api_view(['DELETE'])
-def disassign_appointment(request, date):
-    try:
-        appointment = Appointment.objects.get(appointment_date=date)
-        appointment.delete()
-        return Response({'message': 'Appointment disassigned successfully'}, status=status.HTTP_204_NO_CONTENT)
-    except Appointment.DoesNotExist:
-        return Response({'message': 'Appointment not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET'])
-def list_doctors_appointments(request):
-    doctors = Doctor.objects.prefetch_related('appointments').all()
-    response_data = []
+    def delete(self, request, date):
+        try:
+            appointment = get_object_or_404(Appointment, appointment_date=date)
+            appointment.delete()
+            return Response({'message': 'Appointment deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    for doctor in doctors:
-        appointments = [appt.appointment_date for appt in doctor.appointments.all()]
-        response_data.append({
-            'doctor': doctor.first_name + ' ' + doctor.last_name,
-            'appointments': appointments
-        })
-    
-    return Response(response_data)
-
-
-@api_view(['GET'])
-def appointment_info(request, date):
-
-    try:
-        appointment = Appointment.objects.get(appointment_date=date)
-    except Appointment.DoesNotExist:
-        return Response({'message': 'No Appointment at ' + date})
-
-    return Response({
-        'doctor': appointment.doctor_first_name + ' ' + appointment.doctor_last_name,
-    })
-    
-
-@api_view(['GET'])
-def doctor_appointments(request, doctor_id):
-    
-    try:
-        doctor = Doctor.objects.get(pk=doctor_id)
-    except Doctor.DoesNotExist:
-        return Response({'message': 'Doctor not found'}, status=status.HTTP_404_NOT_FOUND)
-
-    response_data = []
-
-    appointments = [appt.appointment_date for appt in doctor.appointments.all()]
-
-    response_data = {
-        'doctor': doctor.first_name + ' ' + doctor.last_name,
-        'appointments': appointments
-    }
-    
-    return Response(response_data)
+    def get(self, request):
+        """List all doctors with their appointments, or get specific appointment details."""
+        doctor_id = request.query_params.get('doctor_id')
+        date = request.query_params.get('date')
+        
+        if date:
+            # Return specific appointment info for a given date
+            try:
+                appointment = Appointment.objects.get(appointment_date=date)
+                return Response({
+                    'doctor': f"{appointment.doctor_first_name} {appointment.doctor_last_name}"
+                }, status=status.HTTP_200_OK)
+            except Appointment.DoesNotExist:
+                return Response({'message': f'No appointment found on {date}'}, status=status.HTTP_404_NOT_FOUND)
+        
+        elif doctor_id:
+            # Return appointments for a specific doctor
+            doctor = get_object_or_404(Doctor, pk=doctor_id)
+            appointments = [appt.appointment_date for appt in doctor.appointments.all()]
+            return Response({
+                'doctor': f"{doctor.first_name} {doctor.last_name}",
+                'appointments': appointments
+            }, status=status.HTTP_200_OK)
+        
+        else:
+            # List all doctors with their appointments
+            doctors = Doctor.objects.prefetch_related('appointments').all()
+            response_data = []
+            for doctor in doctors:
+                appointments = [appt.appointment_date for appt in doctor.appointments.all()]
+                response_data.append({
+                    'doctor': f"{doctor.first_name} {doctor.last_name}",
+                    'appointments': appointments
+                })
+            return Response(response_data, status=status.HTTP_200_OK)
