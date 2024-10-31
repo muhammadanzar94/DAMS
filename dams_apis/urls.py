@@ -1,14 +1,12 @@
 # urls.py
 from django.urls import path
-from .views.doctor_views import create_doctor, update_doctor, delete_doctor, list_doctors
 from .views.appointment_views import create_appointment, update_appointment, disassign_appointment, list_doctors_appointments, appointment_info, doctor_appointments
+from .views.doctor_views import DoctorView
 
 urlpatterns = [
     # Doctor Endpoints
-    path('doctors/', list_doctors, name='list_doctors'),
-    path('doctors/create/', create_doctor, name='create_doctor'),
-    path('doctors/update/<int:doctor_id>/', update_doctor, name='update_doctor'),
-    path('doctors/delete/<int:doctor_id>/', delete_doctor, name='delete_doctor'),
+    path('doctors/', DoctorView.as_view()),  # GET and POST
+    path('doctors/<int:doctor_id>/', DoctorView.as_view()),  # PUT and DELETE
 
     # Appointment Endpoints
     path('appointments/create/', create_appointment, name='create_appointment'),
