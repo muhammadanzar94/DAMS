@@ -2,9 +2,9 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.shortcuts import get_object_or_404
 from ..models.doctor import Doctor
 from ..serializers import DoctorSerializer
-from django.shortcuts import get_object_or_404
 
 class DoctorView(APIView):
     
@@ -19,18 +19,16 @@ class DoctorView(APIView):
         except Exception as e:
             return Response({'status': 'error', 'message': str(e)}, status=400)
 
-
     # Read
     def get(self, request):
         doctors = Doctor.objects.all()
         serializer = DoctorSerializer(doctors, many=True)
         return Response(serializer.data)
-    
-    
+
     # Update
     def put(self, request, doctor_id):
         try:
-            doctor = get_object_or_404(Doctor, id=doctor_id)        
+            doctor = get_object_or_404(Doctor, id=doctor_id)
             serializer = DoctorSerializer(doctor, data=request.data)
             if serializer.is_valid():
                 serializer.save()
