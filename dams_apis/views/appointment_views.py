@@ -9,6 +9,10 @@ from django.shortcuts import get_object_or_404
 
 class AppointmentView(APIView):
     
+    
+
+    
+    # create an appointment with multiple date selection feature
     def post(self, request):
 
         data = request.data
@@ -38,6 +42,9 @@ class AppointmentView(APIView):
         return Response({'message': 'Appointments created successfully'}, status=status.HTTP_201_CREATED)
 
 
+
+
+    # Update an appointment at a date
     def put(self, request, date):
         new_doctor_id = request.data.get('doctor_id')
         new_doctor = get_object_or_404(Doctor, id=new_doctor_id)
@@ -63,6 +70,10 @@ class AppointmentView(APIView):
         except Exception as e:
             return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+
+
+
+    # Delete an appointment by date
     def delete(self, request, date):
         try:
             appointment = get_object_or_404(Appointment, appointment_date=date)
@@ -71,6 +82,12 @@ class AppointmentView(APIView):
         except Exception as e:
             return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+
+
+
+    # Get all appointments of a doctor 
+    # Get all appointments of a date 
+    # Get all appointments 
     def get(self, request):
         doctor_id = request.query_params.get('doctor_id')
         date = request.query_params.get('date')
