@@ -1,4 +1,5 @@
 # serializers/appointment_serializer.py
+from rest_framework.exceptions import ValidationError  # Import ValidationError directly from rest_framework
 from rest_framework import serializers
 from django.db import IntegrityError
 from dams_apis.models import Appointment, Doctor
@@ -16,12 +17,12 @@ class AppointmentSerializer(serializers.ModelSerializer):
         try:
             return Doctor.objects.get(pk=doctor_id)
         except Doctor.DoesNotExist:
-            raise serializers.ValidationError("Doctor not found")
+            raise ValidationError("Doctor not found")
 
     def validate_appointment_dates(self, doctor, dates):
         """Ensure no appointment exists for the specified doctor and dates."""
         if Appointment.objects.filter(doctor=doctor, appointment_date__in=dates).exists():
-            raise serializers.ValidationError("An appointment already exists for one or more of these dates for this doctor.")
+            raise ValidationError("An appointment already exists for one or more of these dates for this doctor.")
         
         return dates
 
@@ -49,6 +50,33 @@ class AppointmentSerializer(serializers.ModelSerializer):
         try:
             Appointment.objects.bulk_create(appointments)
         except IntegrityError:
-            raise serializers.ValidationError("One or more appointments already exist for the selected dates.")
+            raise ValidationError("One or more appointments already exist for the selected dates.")
         
         return appointments
+
+    def update_appointment(self, date, new_doctor_id):
+        """Custom method to update an appointment with a new doctor."""
+        # Retrieve the appointment by date
+        appointment = Appointment.objects.filter(appointment_date=date).first()
+        if not appointment:
+            raise ValidationError(f"No appointment found on {date}")
+
+        # Retrieve the new doctor and update the appointment
+        new_doctor = self.get_doctor(new_doctor_id)
+        
+        try:
+            appointment.doctor = new_doctor
+            appointment.doctor_first_name = new_doctor.first_name
+            appointment.doctor_last_name = new_doctor.last_name
+            appointment.save()
+            
+            # Return updated appointment details
+            return {
+                'appointment_id': appointment.id,
+                'new_doctor_id': appointment.doctor_id,
+                'new_doctor_first_name': appointment.doctor_first_name,
+                'new_doctor_last_name': appointment.doctor_last_name,
+                'appointment_date': appointment.appointment_date
+            }
+        except Exception as e:
+            raise ValidationError(str(e))  # Raises ValidationError that is caught by the view
