@@ -12,28 +12,25 @@ class AppointmentSerializer(serializers.ModelSerializer):
         model = Appointment
         fields = ['doctor_id', 'doctor_first_name', 'doctor_last_name', 'appointment_date']
 
+    # Retrieve doctor instance or raise validation error if not found.
     def get_doctor(self, doctor_id):
-        """Retrieve doctor instance or raise validation error if not found."""
         try:
             return Doctor.objects.get(pk=doctor_id)
         except Doctor.DoesNotExist:
             raise ValidationError("Doctor not found")
 
+    # Ensure no appointment exists for the specified doctor and dates.
     def validate_appointment_dates(self, doctor, dates):
-        """Ensure no appointment exists for the specified doctor and dates."""
         if Appointment.objects.filter(doctor=doctor, appointment_date__in=dates).exists():
             raise ValidationError("An appointment already exists for one or more of these dates for this doctor.")
         
         return dates
 
+    # Custom method to handle single and multiple appointment creation.
     def create_appointments_with_dates(self, doctor_id, appointment_date):
-        """Custom method to handle single and multiple appointment creation."""
+        
         doctor = self.get_doctor(doctor_id)
-        
-        # Convert appointment_date to a list if it's a single date
         dates = appointment_date if isinstance(appointment_date, list) else [appointment_date]
-        
-        # Validate the dates
         self.validate_appointment_dates(doctor, dates)
 
         # Create separate appointments for each date
@@ -46,7 +43,6 @@ class AppointmentSerializer(serializers.ModelSerializer):
             ) for date in dates
         ]
 
-        # Bulk create appointments
         try:
             Appointment.objects.bulk_create(appointments)
         except IntegrityError:
@@ -54,14 +50,15 @@ class AppointmentSerializer(serializers.ModelSerializer):
         
         return appointments
 
+    # Custom method to update an appointment with a new doctor.
     def update_appointment(self, date, new_doctor_id):
-        """Custom method to update an appointment with a new doctor."""
+        
+        
         # Retrieve the appointment by date
         appointment = Appointment.objects.filter(appointment_date=date).first()
         if not appointment:
             raise ValidationError(f"No appointment found on {date}")
 
-        # Retrieve the new doctor and update the appointment
         new_doctor = self.get_doctor(new_doctor_id)
         
         try:
@@ -79,14 +76,45 @@ class AppointmentSerializer(serializers.ModelSerializer):
                 'appointment_date': appointment.appointment_date
             }
         except Exception as e:
-            raise ValidationError(str(e))  # Raises ValidationError that is caught by the view
+            raise ValidationError(str(e))
 
-
+    # Custom method to delete an appointment by date.
     def delete_appointment(self, date):
-        """Custom method to delete an appointment by date."""
         appointment = Appointment.objects.filter(appointment_date=date).first()
         if not appointment:
             raise ValidationError(f"No appointment found on {date}")
         
         appointment.delete()  # Perform the deletion
         return {'message': 'Appointment deleted successfully'}
+    
+    # Retrieve appointment by date.
+    def get_appointments_by_date(self, date):
+        try:
+            appointment = Appointment.objects.get(appointment_date=date)
+            return {
+                'doctor': f"{appointment.doctor_first_name} {appointment.doctor_last_name}",
+                'appointment_date': appointment.appointment_date
+            }
+        except Appointment.DoesNotExist:
+            raise serializers.ValidationError(f'No appointment found on {date}')
+
+    # Retrieve all appointments for a specific doctor.
+    def get_appointments_by_doctor(self, doctor_id):
+        doctor = Doctor.objects.get(pk=doctor_id)
+        appointments = [appt.appointment_date for appt in doctor.appointments.all()]
+        return {
+            'doctor': f"{doctor.first_name} {doctor.last_name}",
+            'appointments': appointments
+        }
+
+    # Retrieve all appointments.
+    def get_all_appointments(self):
+        response_data = []
+        doctors = Doctor.objects.prefetch_related('appointments').all()
+        for doctor in doctors:
+            appointments = [appt.appointment_date for appt in doctor.appointments.all()]
+            response_data.append({
+                'doctor': f"{doctor.first_name} {doctor.last_name}",
+                'appointments': appointments
+            })
+        return response_data

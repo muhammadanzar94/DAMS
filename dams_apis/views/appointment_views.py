@@ -46,7 +46,6 @@ class AppointmentView(APIView):
                 'appointment': updated_appointment
             }, status=status.HTTP_200_OK)
         except ValidationError as e:
-            # Catches and returns the validation error message from serializer
             return Response({'status': 'error', 'message': e.detail}, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -58,41 +57,30 @@ class AppointmentView(APIView):
             response_data = serializer.delete_appointment(date)
             return Response(response_data, status=status.HTTP_204_NO_CONTENT)
         except ValidationError as e:
-            # Catches and returns the validation error message from serializer
             return Response({'status': 'error', 'message': e.detail}, status=status.HTTP_404_NOT_FOUND)
 
 
+    # Get appointments based on parameters i.e.
     # Get all appointments of a doctor 
     # Get all appointments of a date 
     # Get all appointments 
     def get(self, request):
+        serializer = AppointmentSerializer()
         doctor_id = request.query_params.get('doctor_id')
         date = request.query_params.get('date')
-        
-        if date:
-            try:
-                appointment = Appointment.objects.get(appointment_date=date)
-                return Response({
-                    'doctor': f"{appointment.doctor_first_name} {appointment.doctor_last_name}"
-                }, status=status.HTTP_200_OK)
-            except Appointment.DoesNotExist:
-                return Response({'message': f'No appointment found on {date}'}, status=status.HTTP_404_NOT_FOUND)
-        
-        elif doctor_id:
-            doctor = get_object_or_404(Doctor, pk=doctor_id)
-            appointments = [appt.appointment_date for appt in doctor.appointments.all()]
-            return Response({
-                'doctor': f"{doctor.first_name} {doctor.last_name}",
-                'appointments': appointments
-            }, status=status.HTTP_200_OK)
-        
-        else:
-            doctors = Doctor.objects.prefetch_related('appointments').all()
-            response_data = []
-            for doctor in doctors:
-                appointments = [appt.appointment_date for appt in doctor.appointments.all()]
-                response_data.append({
-                    'doctor': f"{doctor.first_name} {doctor.last_name}",
-                    'appointments': appointments
-                })
-            return Response(response_data, status=status.HTTP_200_OK)
+
+        try:
+            if date:
+                response_data = serializer.get_appointments_by_date(date)
+                return Response(response_data, status=status.HTTP_200_OK)
+
+            elif doctor_id:
+                response_data = serializer.get_appointments_by_doctor(doctor_id)
+                return Response(response_data, status=status.HTTP_200_OK)
+
+            else:
+                response_data = serializer.get_all_appointments()
+                return Response(response_data, status=status.HTTP_200_OK)
+
+        except ValidationError as e:
+            return Response({'status': 'error', 'message': e.detail}, status=status.HTTP_404_NOT_FOUND)

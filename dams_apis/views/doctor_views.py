@@ -8,7 +8,7 @@ from ..serializers import DoctorSerializer
 
 class DoctorView(APIView):
     
-    # Create
+    # Create doctor method
     def post(self, request):
         try:
             serializer = DoctorSerializer(data=request.data)
@@ -19,13 +19,13 @@ class DoctorView(APIView):
         except Exception as e:
             return Response({'status': 'error', 'message': str(e)}, status=400)
 
-    # Read
+    # Read all doctors
     def get(self, request):
         doctors = Doctor.objects.all()
         serializer = DoctorSerializer(doctors, many=True)
         return Response(serializer.data)
 
-    # Update
+    # Update a doctor data
     def put(self, request, doctor_id):
         try:
             doctor = get_object_or_404(Doctor, id=doctor_id)
@@ -39,7 +39,7 @@ class DoctorView(APIView):
             return Response({'status': 'error', 'message': str(e)}, status=400)
 
 
-    # Delete
+    # Delete a doctor 
     def delete(self, request, doctor_id):
         try:
             doctor = get_object_or_404(Doctor, id=doctor_id)
