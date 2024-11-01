@@ -8,42 +8,24 @@ from ..serializers import AppointmentSerializer
 from django.shortcuts import get_object_or_404
 
 class AppointmentView(APIView):
-    
-    
 
-    
-    # create an appointment with multiple date selection feature
+    # Create single or multiple appointments
     def post(self, request):
-
-        data = request.data
-        doctor_id = data['doctor_id']
-        appointment_dates = data['appointment_dates']  # Could be a single date or a list of dates
-        try:
-            doctor = Doctor.objects.get(pk=doctor_id)
-        except Doctor.DoesNotExist:
-            return Response({'error': 'Doctor not found'}, status=status.HTTP_404_NOT_FOUND)
-
-        # Create multiple appointments if necessary
-        try:
-            appointments = []
-            if isinstance(appointment_dates, list):
-                for date in appointment_dates:
-                    appointment = Appointment(doctor=doctor, doctor_first_name=doctor.first_name, doctor_last_name=doctor.last_name, appointment_date=date)
-                    appointments.append(appointment)
-                Appointment.objects.bulk_create(appointments)
-            else:
-                appointment = Appointment(doctor=doctor, doctor_first_name=doctor.first_name, doctor_last_name=doctor.last_name, appointment_date=appointment_dates)
-                appointment.save()
-        except IntegrityError as e:
-            return Response({'message': 'Appointment already exists for this date.'}, status=400)
-        except Exception as e:
-            return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = AppointmentSerializer(data=request.data)
         
-        return Response({'message': 'Appointments created successfully'}, status=status.HTTP_201_CREATED)
-
-
-
-
+        if serializer.is_valid():
+            doctor_id = serializer.validated_data['doctor'].id
+            appointment_date = serializer.validated_data['appointment_date']
+            
+            try:
+                serializer.create_appointments_with_dates(doctor_id, appointment_date)
+                return Response({'message': 'Appointments created successfully'}, status=status.HTTP_201_CREATED)
+            except serializer.ValidationError as e:
+                return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
     # Update an appointment at a date
     def put(self, request, date):
         new_doctor_id = request.data.get('doctor_id')
