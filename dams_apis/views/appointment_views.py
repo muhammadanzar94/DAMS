@@ -50,17 +50,16 @@ class AppointmentView(APIView):
             return Response({'status': 'error', 'message': e.detail}, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-    # Delete an appointment by date
+   # Delete an appointment by date
     def delete(self, request, date):
+        serializer = AppointmentSerializer()
+        
         try:
-            appointment = get_object_or_404(Appointment, appointment_date=date)
-            appointment.delete()
-            return Response({'message': 'Appointment deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
-        except Exception as e:
-            return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
+            response_data = serializer.delete_appointment(date)
+            return Response(response_data, status=status.HTTP_204_NO_CONTENT)
+        except ValidationError as e:
+            # Catches and returns the validation error message from serializer
+            return Response({'status': 'error', 'message': e.detail}, status=status.HTTP_404_NOT_FOUND)
 
 
     # Get all appointments of a doctor 

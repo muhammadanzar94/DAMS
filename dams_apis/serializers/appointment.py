@@ -80,3 +80,13 @@ class AppointmentSerializer(serializers.ModelSerializer):
             }
         except Exception as e:
             raise ValidationError(str(e))  # Raises ValidationError that is caught by the view
+
+
+    def delete_appointment(self, date):
+        """Custom method to delete an appointment by date."""
+        appointment = Appointment.objects.filter(appointment_date=date).first()
+        if not appointment:
+            raise ValidationError(f"No appointment found on {date}")
+        
+        appointment.delete()  # Perform the deletion
+        return {'message': 'Appointment deleted successfully'}
